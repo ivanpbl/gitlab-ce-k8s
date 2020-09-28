@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: gitlab-ce
+  name: gitlab-ce
+  namespace: ci-cd
+spec:
+  selector:
+    matchLabels:
+      app: gitlab-ce
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: gitlab-ce
+    spec:
+      containers:
+      - env:
+        - name: GITLAB_OMNIBUS_CONFIG
+          value: |
+            gitlab_rails['monitoring_whitelist'] = ['172.0.0.0/8']
+        image: gitlab/gitlab-ce:latest
+        name: gitlab-ce
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        - containerPort: 22
+        resources: {}
+        livenessProbe:
+          httpGet:
+            path: /-/liveness
+            port: 80
+          initialDelaySeconds: 300
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /-/readiness
+            port: 80
+          initialDelaySeconds: 300
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/gitlab
+          name: gitlab-ce-etc-claim
+        - mountPath: /var/log/gitlab
+          name: gitlab-ce-var-log-claim
+        - mountPath: /var/opt/gitlab
+          name: gitlab-ce-var-opt-claim
+      hostname: gitlab-ce
+      volumes:
+      - name: gitlab-ce-etc-claim
+        persistentVolumeClaim:
+          claimName: gitlab-ce-etc-claim
+      - name: gitlab-ce-var-log-claim
+        persistentVolumeClaim:
+          claimName: gitlab-ce-var-log-claim
+      - name: gitlab-ce-var-opt-claim
+        persistentVolumeClaim:
+          claimName: gitlab-ce-var-opt-claim
